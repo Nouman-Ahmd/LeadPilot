@@ -280,17 +280,47 @@ export default function SearchPage({
   const setFilter = (key: keyof SearchFilters, value: string | string[]) =>
     setFilters((current) => ({ ...current, [key]: value }));
 
+  const buildQueryFromFilters = (searchFilters: SearchFilters) => {
+    const parts: string[] = [];
+    const industryList = Array.isArray(searchFilters.industry)
+      ? searchFilters.industry
+      : [searchFilters.industry].filter(Boolean);
+    const titleList = Array.isArray(searchFilters.title)
+      ? searchFilters.title
+      : [searchFilters.title].filter(Boolean);
+    if (titleList.length) parts.push(titleList.join(", "));
+    if (industryList.length) parts.push(`in ${industryList.join(", ")} companies`);
+    if (searchFilters.location) parts.push(`in ${searchFilters.location}`);
+    if (searchFilters.companySize)
+      parts.push(`with ${searchFilters.companySize} employees`);
+    return parts.join(" ") || "companies";
+  };
+
   const runSearch = async (
     overrideQuery?: string,
     overrideFilters?: SearchFilters,
   ) => {
     const searchQuery = overrideQuery ?? query;
     const searchFilters = overrideFilters ?? filters;
-    if (!searchQuery.trim()) {
+
+    const hasAnyFilter =
+      (Array.isArray(searchFilters.industry)
+        ? searchFilters.industry.length > 0
+        : !!searchFilters.industry) ||
+      !!searchFilters.location ||
+      !!searchFilters.companySize ||
+      (Array.isArray(searchFilters.title)
+        ? searchFilters.title.length > 0
+        : !!searchFilters.title);
+
+    if (!searchQuery.trim() && !hasAnyFilter) {
       setHasSearched(false);
-      notify({ message: "Enter a lead-search query to begin." });
+      notify({ message: "Enter a lead-search query or set a filter to begin." });
       return;
     }
+
+    const effectiveQuery = searchQuery.trim() || buildQueryFromFilters(searchFilters);
+
     setQuery(searchQuery);
     setFilters(searchFilters);
     setHasSearched(true);
@@ -309,7 +339,7 @@ export default function SearchPage({
       },
     });
     const nextSearch = {
-      query: searchQuery.trim(),
+      query: effectiveQuery,
       filters: { ...searchFilters },
     };
     try {
