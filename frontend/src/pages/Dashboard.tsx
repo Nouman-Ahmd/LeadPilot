@@ -244,13 +244,22 @@ export default function Dashboard({
             </span>
           </div>
           <div className="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted)/.45)] p-4">
-            <p className="text-[13px] font-bold">
-              Brand and growth leaders in Pakistan’s retail market
-            </p>
-            <p className="mt-1 text-[11px] leading-5 text-[hsl(var(--muted-foreground))]">
-              You have found 14 apparel leaders recently. Explore adjacent
-              retail companies to widen the shortlist.
-            </p>
+            {searches.length === 0 ? (
+              <p className="text-[13px] font-bold">
+                Run your first discovery to see suggestions here.
+              </p>
+            ) : (
+              <>
+                <p className="text-[13px] font-bold">{searches[0].query}</p>
+                <p className="mt-1 text-[11px] leading-5 text-[hsl(var(--muted-foreground))]">
+                  You found {searches[0].resultCount} leads in your last search
+                  {searches[0].filters?.location
+                    ? ` in ${searches[0].filters.location}`
+                    : ""}
+                  . Explore adjacent companies to widen the shortlist.
+                </p>
+              </>
+            )}
             <button
               data-testid="button-suggested-search"
               className="btn-quiet mt-3 -ml-2 flex items-center gap-1 text-[hsl(var(--primary))]"

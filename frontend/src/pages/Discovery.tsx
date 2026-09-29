@@ -279,12 +279,20 @@ export default function SearchPage({
     tab === "people" ? matching.peopleResults : matching.companyResults;
   const setFilter = (key: keyof SearchFilters, value: string | string[]) =>
     setFilters((current) => ({ ...current, [key]: value }));
-  const runSearch = async () => {
-    if (!query.trim()) {
+
+  const runSearch = async (
+    overrideQuery?: string,
+    overrideFilters?: SearchFilters,
+  ) => {
+    const searchQuery = overrideQuery ?? query;
+    const searchFilters = overrideFilters ?? filters;
+    if (!searchQuery.trim()) {
       setHasSearched(false);
       notify({ message: "Enter a lead-search query to begin." });
       return;
     }
+    setQuery(searchQuery);
+    setFilters(searchFilters);
     setHasSearched(true);
     setIsLoading(true);
     setSearchError("");
@@ -300,7 +308,10 @@ export default function SearchPage({
         keywords: [],
       },
     });
-    const nextSearch = { query: query.trim(), filters: { ...filters } };
+    const nextSearch = {
+      query: searchQuery.trim(),
+      filters: { ...searchFilters },
+    };
     try {
       const [companyData, peopleData] = await Promise.all([
         searchCompanies(nextSearch),
@@ -335,6 +346,14 @@ export default function SearchPage({
     } finally {
       setIsLoading(false);
     }
+  };
+  const applyAiSearch = (aiQuery: string, aiLocation: string) => {
+    const nextFilters = {
+      ...filters,
+      location: aiLocation || filters.location,
+    };
+    setIsAiOpen(false);
+    runSearch(aiQuery, nextFilters);
   };
   const saveLead = async (lead: Lead) => {
     const saved = savedLeadIds.includes(lead.id);
@@ -562,7 +581,12 @@ export default function SearchPage({
           }}
         />
       )}
-      {isAiOpen && <AiAssistantPanel onClose={() => setIsAiOpen(false)} />}
+      {isAiOpen && (
+        <AiAssistantPanel
+          onClose={() => setIsAiOpen(false)}
+          onApplySearch={applyAiSearch}
+        />
+      )}
     </div>
   );
 }
