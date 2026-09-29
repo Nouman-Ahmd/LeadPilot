@@ -1,24 +1,23 @@
 import { useState } from "react";
 import { Bot, Send, Sparkles, X } from "lucide-react";
+import { authHeaders } from "@/api/client";
 
 type Message = {
   role: "user" | "assistant";
   content: string;
+  searchQuery?: string;
+  searchLocation?: string;
 };
 
 export default function AiAssistantPanel({
   onClose,
+  onApplySearch,
 }: {
   onClose: () => void;
+  onApplySearch: (query: string, location: string) => void;
 }) {
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "assistant",
-      content:
-        "I'm your AI Assistant, here to help you find and understand the right leads.",
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
 
   const sendMessage = async () => {
@@ -42,6 +41,7 @@ export default function AiAssistantPanel({
       const response = await fetch("http://localhost:4000/api/ai/chat", {
         method: "POST",
         headers: {
+          ...authHeaders(),
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -60,7 +60,9 @@ export default function AiAssistantPanel({
         ...prev,
         {
           role: "assistant",
-          content: data.answer,
+          content: data.reply,
+          searchQuery: data.type === "search" ? data.query : undefined,
+          searchLocation: data.type === "search" ? data.location : undefined,
         },
       ]);
     } catch (error) {
@@ -81,19 +83,15 @@ export default function AiAssistantPanel({
 
   return (
     <aside className="ai-drawer" aria-label="AI Assistant">
-
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[hsl(var(--border))] px-5 py-4">
-
         <div className="flex items-center gap-3">
           <div className="ai-avatar">
             <Bot size={17} />
           </div>
 
           <div>
-            <p className="text-[13px] font-extrabold">
-              AI Assistant
-            </p>
+            <p className="text-[13px] font-extrabold">AI Assistant</p>
 
             <p className="mt-0.5 text-[10px] text-[hsl(var(--muted-foreground))]">
               LeadPilot intelligence
@@ -109,60 +107,69 @@ export default function AiAssistantPanel({
         >
           <X size={16} />
         </button>
-
       </div>
-
 
       {/* Messages */}
       <div className="ai-messages">
+        {messages.length === 0 && (
+          <div className="ai-message assistant">
+            <div className="ai-message-icon">
+              <Sparkles size={13} />
+            </div>
+            <div>
+              <p className="text-[12px] leading-5 whitespace-pre-wrap">
+                I'm your AI Assistant, here to help you find and understand the right leads.
+              </p>
+            </div>
+          </div>
+        )}
 
         {messages.map((message, index) => (
-          <div
-            key={index}
-            className={`ai-message ${message.role}`}
-          >
-
+          <div key={index} className={`ai-message ${message.role}`}>
             {message.role === "assistant" && (
               <div className="ai-message-icon">
                 <Sparkles size={13} />
               </div>
             )}
-
             <div>
               <p className="text-[12px] leading-5 whitespace-pre-wrap">
                 {message.content}
               </p>
+              {message.searchQuery && (
+                <button
+                  type="button"
+                  className="btn-primary mt-2 text-[11px]"
+                  onClick={() =>
+                    onApplySearch(
+                      message.searchQuery!,
+                      message.searchLocation || "",
+                    )
+                  }
+                >
+                  View in Companies tab
+                </button>
+              )}
             </div>
-
           </div>
         ))}
-
 
         {/* Loading */}
         {loading && (
           <div className="ai-message assistant">
-
             <div className="ai-message-icon">
               <Sparkles size={13} />
             </div>
 
             <div>
-              <p className="text-[12px] leading-5">
-                Thinking...
-              </p>
+              <p className="text-[12px] leading-5">Thinking...</p>
             </div>
-
           </div>
         )}
-
       </div>
-
 
       {/* Input */}
       <div className="border-t border-[hsl(var(--border))] p-4">
-
         <div className="ai-composer">
-
           <input
             aria-label="Message AI Assistant"
             className="min-w-0 flex-1 bg-transparent px-1 text-[12px] outline-none placeholder:text-[hsl(var(--muted-foreground))]"
@@ -186,15 +193,12 @@ export default function AiAssistantPanel({
           >
             <Send size={15} />
           </button>
-
         </div>
 
         <p className="mt-2 text-center text-[9px] text-[hsl(var(--muted-foreground))]">
           Powered by OpenRouter
         </p>
-
       </div>
-
     </aside>
   );
 }
